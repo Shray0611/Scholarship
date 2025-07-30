@@ -12,15 +12,36 @@ const StudyBooksApplicationSchema = new mongoose.Schema({
   },
   yearOfStudy: {
     type: String,
-    required: true,
+    required: false,
   },
   field: {
     type: String,
-    required: true,
+    required: false,
   },
   booksRequired: {
     type: String,
     required: true,
+  },
+  // New fields for admin dropdowns
+  standard: {
+    type: String,
+    required: false,
+  },
+  stream: {
+    type: String,
+    required: false,
+  },
+  medium: {
+    type: String,
+    required: false,
+  },
+  generatedId: {
+    type: String,
+    required: false,
+  },
+  setNumber: {
+    type: Number,
+    required: false,
   },
   status: {
     type: String,

@@ -201,6 +201,12 @@ const Navbar = () => {
                     >
                       History
                     </Link>
+                    <Link
+                      to="/profile"
+                      className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-200"
+                    >
+                      Profile
+                    </Link>
                     <button
                       onClick={handleLogout}
                       className="px-3 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 transition-all duration-200"
@@ -289,6 +295,13 @@ const Navbar = () => {
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         History
+                      </Link>
+                      <Link
+                        to="/profile"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Profile
                       </Link>
                     </>
                   )}

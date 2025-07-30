@@ -13,6 +13,7 @@ const Registration = () => {
     motherName: "",
     dob: "",
     address: "",
+    villageName: "",
     state: "",
     caste: "",
     gender: "",
@@ -464,6 +465,44 @@ const Registration = () => {
                       rows="3"
                       className="pl-10 block w-full border border-gray-300 rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     ></textarea>
+                  </div>
+                </div>
+
+                {/* Village Name Field */}
+                <div className="mb-6">
+                  <label
+                    htmlFor="villageName"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Village Name
+                  </label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg
+                        className="h-5 w-5 text-gray-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+                        />
+                        <circle cx="12" cy="12" r="5" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      id="villageName"
+                      name="villageName"
+                      value={data.villageName}
+                      onChange={handleChange}
+                      placeholder="Enter your village name"
+                      required
+                      className="pl-10 block w-full border border-gray-300 rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
                   </div>
                 </div>
 

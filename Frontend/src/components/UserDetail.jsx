@@ -5,6 +5,9 @@ import { Card, Button, Alert, DocumentViewer } from "./ui";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
+// Configure axios base URL
+axios.defaults.baseURL = BASE_URL;
+
 const UserDetail = () => {
   const { id } = useParams();
   const [registration, setRegistration] = useState(null);
@@ -157,6 +160,130 @@ const UserDetail = () => {
     }
   };
 
+  // Test function to check backend connectivity
+  const testBackendConnection = async () => {
+    try {
+      console.log("Testing backend connection...");
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/admin/users", {
+        headers: { "x-auth-token": token },
+      });
+      console.log("Backend is accessible:", response.status);
+      return true;
+    } catch (err) {
+      console.error("Backend connection failed:", err);
+      console.error("Error details:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+        config: err.config,
+      });
+      return false;
+    }
+  };
+
+  const handleStudyBooksUpdate = async (appId, field, value) => {
+    try {
+      console.log("Dropdown changed:", { appId, field, value });
+
+      const token = localStorage.getItem("token");
+      const currentApp = applications.find((app) => app._id === appId);
+
+      if (!currentApp) {
+        alert("Application not found in state.");
+        return;
+      }
+
+      // Create a copy of the current app and update the specific field
+      const updatedApp = { ...currentApp, [field]: value };
+
+      // Update the application in state immediately for UI responsiveness
+      setApplications((prev) =>
+        prev.map((a) => (a._id === appId ? updatedApp : a))
+      );
+
+      // Check if all required fields are selected
+      if (!updatedApp.standard || !updatedApp.stream || !updatedApp.medium) {
+        console.log(
+          "Not all required fields selected yet. Skipping backend update."
+        );
+        return; // Don't send request to backend yet
+      }
+
+      // Prepare the update data for backend
+      const updateData = {
+        standard: updatedApp.standard,
+        stream: updatedApp.stream,
+        medium: updatedApp.medium,
+      };
+
+      console.log("Sending update request:", {
+        appId,
+        field,
+        value,
+        updateData,
+        url: `/api/admin/update/study-books/${appId}`,
+      });
+
+      const response = await axios.post(
+        `/api/admin/update/study-books/${appId}`,
+        updateData,
+        {
+          headers: {
+            "x-auth-token": token,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("Update response:", response.data);
+
+      // Update the application in state with generated ID
+      setApplications((prev) =>
+        prev.map((a) =>
+          a._id === appId
+            ? {
+                ...a,
+                generatedId: response.data.generatedId,
+                setNumber: response.data.setNumber,
+              }
+            : a
+        )
+      );
+
+      if (response.data.generatedId) {
+        alert(`ID generated successfully: ${response.data.generatedId}`);
+      }
+    } catch (err) {
+      console.error("Error updating study books application:", err);
+      console.error("Error response:", err.response?.data);
+      console.error("Error status:", err.response?.status);
+      console.error("Error message:", err.message);
+      console.error("Error config:", err.config);
+
+      // Revert the local state change if backend update failed
+      setApplications((prev) =>
+        prev.map((a) => (a._id === appId ? currentApp : a))
+      );
+
+      if (err.response?.status === 404) {
+        alert("Application not found on server.");
+      } else if (err.response?.status === 401) {
+        alert("Authentication failed. Please login again.");
+      } else if (err.response?.status === 403) {
+        alert("Access denied. Admin privileges required.");
+      } else if (err.code === "ERR_NETWORK") {
+        alert("Network error. Please check if the backend server is running.");
+      } else {
+        alert(
+          `Failed to update study books application: ${
+            err.response?.data?.msg || err.message
+          }`
+        );
+      }
+    }
+  };
+
   const handlePreviewDocument = async (url, title) => {
     try {
       const token = localStorage.getItem("token");
@@ -218,6 +345,66 @@ const UserDetail = () => {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       alert("Failed to download document.");
+    }
+  };
+
+  // Helper to fetch and preview travel expenses ID card (admin)
+  const handleViewTravelIdCard = async (app) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `/api/admin/travel-expenses/${app._id}/file/idCard`,
+        {
+          headers: { "x-auth-token": token },
+          responseType: "arraybuffer",
+        }
+      );
+      // Try to extract filename from Content-Disposition header
+      let fileName = "ID Card";
+      const disposition = res.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match) fileName = match[1];
+      }
+      setViewingDocument({
+        blob: res.data,
+        contentType: res.headers["content-type"],
+        fileName,
+        title: fileName,
+      });
+    } catch (err) {
+      alert("Failed to load ID Card");
+    }
+  };
+
+  const handleDownloadTravelIdCard = async (app) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(
+        `/api/admin/travel-expenses/${app._id}/file/idCard`,
+        {
+          headers: { "x-auth-token": token },
+          responseType: "arraybuffer",
+        }
+      );
+      let fileName = "id_card.pdf";
+      const disposition = res.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match) fileName = match[1];
+      }
+      const url = window.URL.createObjectURL(
+        new Blob([res.data], { type: res.headers["content-type"] })
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Failed to download ID Card");
     }
   };
 
@@ -565,12 +752,7 @@ const UserDetail = () => {
                 </p>
                 <div className="flex space-x-2">
                   <button
-                    onClick={() =>
-                      setViewingDocument({
-                        url: BASE_URL + app.idCard,
-                        title: "ID Card",
-                      })
-                    }
+                    onClick={() => handleViewTravelIdCard(app)}
                     className="inline-flex items-center text-primary hover:text-primary-dark"
                   >
                     <svg
@@ -596,7 +778,7 @@ const UserDetail = () => {
                     Preview
                   </button>
                   <button
-                    onClick={() => handleDownload(app.idCard, "id_card.pdf")}
+                    onClick={() => handleDownloadTravelIdCard(app)}
                     className="inline-flex items-center text-primary hover:text-primary-dark"
                   >
                     <svg
@@ -636,16 +818,171 @@ const UserDetail = () => {
                 <p className="mb-2 font-medium text-gray-700 dark:text-gray-300">
                   Field of Study
                 </p>
-                <p className="text-gray-900 dark:text-white">{app.field}</p>
+                <p className="text-gray-900 dark:text-white">
+                  {app.field || app.courseName || "Not specified"}
+                </p>
               </div>
+            </div>
+
+            {/* Admin Dropdowns */}
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4 flex items-center">
+                <svg
+                  className="w-5 h-5 mr-2 text-blue-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+                Admin Configuration
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Standard
+                  </label>
+                  <select
+                    value={app.standard || ""}
+                    onChange={(e) =>
+                      handleStudyBooksUpdate(
+                        app._id,
+                        "standard",
+                        e.target.value
+                      )
+                    }
+                    disabled={app.status === "approved"}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Standard</option>
+                    <option value="1st">1st</option>
+                    <option value="2nd">2nd</option>
+                    <option value="3rd">3rd</option>
+                    <option value="4th">4th</option>
+                    <option value="5th">5th</option>
+                    <option value="6th">6th</option>
+                    <option value="7th">7th</option>
+                    <option value="8th">8th</option>
+                    <option value="9th">9th</option>
+                    <option value="10th">10th</option>
+                    <option value="11th">11th</option>
+                    <option value="12th">12th</option>
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                    <option value="4th Year">4th Year</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Stream
+                  </label>
+                  <select
+                    value={app.stream || ""}
+                    onChange={(e) =>
+                      handleStudyBooksUpdate(app._id, "stream", e.target.value)
+                    }
+                    disabled={app.status === "approved"}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Stream</option>
+                    <option value="Science">Science</option>
+                    <option value="Commerce">Commerce</option>
+                    <option value="Arts">Arts</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Medical">Medical</option>
+                    <option value="Bachelor of Arts">
+                      Bachelor of Arts (BA)
+                    </option>
+                    <option value="Bcom">Bcom</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Medium
+                  </label>
+                  <select
+                    value={app.medium || ""}
+                    onChange={(e) =>
+                      handleStudyBooksUpdate(app._id, "medium", e.target.value)
+                    }
+                    disabled={app.status === "approved"}
+                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Medium</option>
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Marathi">Marathi</option>
+                  </select>
+                </div>
+              </div>
+              {app.generatedId && (
+                <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Generated ID
+                  </p>
+                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                    {app.generatedId}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <p className="mb-2 font-medium text-gray-700 dark:text-gray-300">
                 Books Required
               </p>
-              <div className="p-4 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 whitespace-pre-wrap text-gray-800 dark:text-gray-200">
-                {app.booksRequired}
+              <div className="space-y-2">
+                {app.booksRequired.split(",").map((book, index) => {
+                  const trimmedBook = book.trim();
+                  const match = trimmedBook.match(
+                    /(.+?)\s*\((Textbook|Guide)\)/i
+                  );
+                  if (match) {
+                    const name = match[1].trim();
+                    const type = match[2];
+                    return (
+                      <div
+                        key={index}
+                        className="p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {name}
+                            </span>
+                            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                              ({type})
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-400 dark:text-gray-500">
+                            #{index + 1}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={index}
+                      className="p-3 bg-white dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {trimmedBook}
+                        </span>
+                        <span className="text-sm text-gray-400 dark:text-gray-500">
+                          #{index + 1}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1370,7 +1707,6 @@ const UserDetail = () => {
       )}
       {viewingDocument && (
         <DocumentViewer
-          url={viewingDocument.url}
           blob={viewingDocument.blob}
           contentType={viewingDocument.contentType}
           fileName={viewingDocument.fileName}

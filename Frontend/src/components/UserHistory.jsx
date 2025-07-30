@@ -139,49 +139,49 @@ const UserHistory = () => {
             {app.birthCertificate && (
               <DocumentCard
                 title="Birth Certificate"
-                url={app.birthCertificate}
+                url={`/api/applications/${app._id}/file/birthCertificate`}
                 color="blue"
               />
             )}
             {app.leavingCertificate && (
               <DocumentCard
                 title="Leaving Certificate"
-                url={app.leavingCertificate}
+                url={`/api/applications/${app._id}/file/leavingCertificate`}
                 color="green"
               />
             )}
             {app.marksheet && (
               <DocumentCard
                 title="Marksheet"
-                url={app.marksheet}
+                url={`/api/applications/${app._id}/file/marksheet`}
                 color="purple"
               />
             )}
             {app.admissionProof && (
               <DocumentCard
                 title="Admission Proof"
-                url={app.admissionProof}
+                url={`/api/applications/${app._id}/file/admissionProof`}
                 color="orange"
               />
             )}
             {app.incomeProof && (
               <DocumentCard
                 title="Income Proof"
-                url={app.incomeProof}
+                url={`/api/applications/${app._id}/file/incomeProof`}
                 color="pink"
               />
             )}
             {app.bankAccount && (
               <DocumentCard
                 title="Bank Account Details"
-                url={app.bankAccount}
+                url={`/api/applications/${app._id}/file/bankAccount`}
                 color="indigo"
               />
             )}
             {app.rationCard && (
               <DocumentCard
                 title="Ration Card"
-                url={app.rationCard}
+                url={`/api/applications/${app._id}/file/rationCard`}
                 color="teal"
               />
             )}
@@ -235,7 +235,10 @@ const UserHistory = () => {
             </p>
             <button
               onClick={() =>
-                setViewingDocument({ url: app.idCard, title: "ID Card" })
+                handlePreviewDocument(
+                  `/api/applications/${app._id}/file/idCard`,
+                  "ID Card"
+                )
               }
               className="inline-flex items-center text-primary hover:text-primary-dark"
             >
@@ -314,6 +317,54 @@ const UserHistory = () => {
     }
   };
 
+  // Add handlePreviewDocument for secure preview
+  const handlePreviewDocument = async (url, title) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(url, {
+        headers: { "x-auth-token": token },
+        responseType: "blob",
+      });
+      const contentType = response.headers["content-type"];
+      // Try to extract filename from Content-Disposition header
+      let fileName = title;
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match) fileName = match[1];
+      }
+      setViewingDocument({
+        blob: response.data,
+        contentType,
+        fileName,
+        title: fileName,
+      });
+    } catch (err) {
+      alert("Failed to preview document.");
+    }
+  };
+
+  // Add cancel handler
+  const handleCancelApplication = async (appId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to cancel this application? This action cannot be undone."
+      )
+    )
+      return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`/api/applications/${appId}`, {
+        headers: { "x-auth-token": token },
+      });
+      // Refresh applications
+      setApplications((prev) => prev.filter((a) => a._id !== appId));
+      setError("");
+    } catch (err) {
+      setError("Failed to cancel application. Please try again.");
+    }
+  };
+
   const DocumentCard = ({ title, url, color }) => {
     const colors = {
       blue: {
@@ -364,7 +415,7 @@ const UserHistory = () => {
 
     return (
       <button
-        onClick={() => setViewingDocument({ url, title })}
+        onClick={() => handlePreviewDocument(url, title)}
         className="group p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 flex flex-col text-left w-full"
       >
         <div className="flex items-center mb-3">
@@ -424,6 +475,25 @@ const UserHistory = () => {
         </div>
       </button>
     );
+  };
+
+  // Helper to fetch and preview travel expenses ID card
+  const handleViewTravelIdCard = async (app) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`/api/applications/travel-expenses/${app._id}/file/idCard`, {
+        headers: { "x-auth-token": token },
+        responseType: "arraybuffer",
+      });
+      setViewingDocument({
+        blob: res.data,
+        contentType: res.headers["content-type"],
+        fileName: app.idCard && app.idCard.fileName ? app.idCard.fileName : "ID Card",
+        title: "ID Card",
+      });
+    } catch (err) {
+      alert("Failed to load ID Card");
+    }
   };
 
   if (loading) {
@@ -637,6 +707,29 @@ const UserHistory = () => {
                   <span className="px-3 py-1.5 text-sm font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                     ID: #{app._id ? app._id.slice(-5) : index + 1}
                   </span>
+                  {app.status !== "approved" && (
+                    <button
+                      onClick={() => handleCancelApplication(app._id)}
+                      className="ml-2 px-3 py-1.5 text-sm font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-800 transition"
+                      title="Cancel Application"
+                    >
+                      <svg
+                        className="w-4 h-4 mr-1 inline"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
               {renderApplicationDetails(app)}
@@ -648,6 +741,9 @@ const UserHistory = () => {
       {viewingDocument && (
         <DocumentViewer
           url={viewingDocument.url}
+          blob={viewingDocument.blob}
+          contentType={viewingDocument.contentType}
+          fileName={viewingDocument.fileName}
           title={viewingDocument.title}
           onClose={() => setViewingDocument(null)}
         />

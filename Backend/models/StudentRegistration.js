@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const StudentRegistrationSchema = new mongoose.Schema({
   academicYear: { type: String },
@@ -9,12 +9,16 @@ const StudentRegistrationSchema = new mongoose.Schema({
   motherName: { type: String },
   dob: { type: Date },
   address: { type: String },
+  villageName: { type: String },
   state: { type: String },
   caste: { type: String },
   gender: { type: String },
   orphan: { type: Boolean },
   disabled: { type: Boolean },
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 
-module.exports = mongoose.model('StudentRegistration', StudentRegistrationSchema);
+module.exports = mongoose.model(
+  "StudentRegistration",
+  StudentRegistrationSchema
+);

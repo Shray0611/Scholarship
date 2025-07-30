@@ -27,6 +27,7 @@ import FAQ from "./components/pages/FAQ";
 import Partners from "./components/pages/Partners";
 import PrivacyPolicy from "./components/pages/PrivacyPolicy";
 import TermsOfService from "./components/pages/TermsOfService";
+import ProfilePage from "./components/ProfilePage";
 
 // Utility to check token validity
 const isTokenValid = () => {
@@ -118,6 +119,14 @@ function App() {
               element={
                 <UserRoute>
                   <StudyBooksForm />
+                </UserRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <UserRoute>
+                  <ProfilePage />
                 </UserRoute>
               }
             />

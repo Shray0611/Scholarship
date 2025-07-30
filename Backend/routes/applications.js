@@ -102,12 +102,16 @@ router.post(
         });
       }
 
-      let idCardPath = "";
+      let idCardBlob = null;
 
-      // Process uploaded ID card
+      // Process uploaded ID card as blob
       if (req.files && req.files.idCard) {
         const file = req.files.idCard[0];
-        idCardPath = `/uploads/${req.user.id}/${file.filename}`;
+        idCardBlob = {
+          data: file.buffer,
+          contentType: file.mimetype,
+          fileName: file.originalname,
+        };
       }
 
       const newApplication = new TravelExpensesApplication({
@@ -118,7 +122,7 @@ router.post(
         distance: req.body.distance,
         travelMode: req.body.travelMode,
         aidRequired: req.body.aidRequired,
-        idCard: idCardPath,
+        idCard: idCardBlob,
       });
 
       await newApplication.save();
@@ -209,6 +213,73 @@ router.get("/my-applications", auth, async (req, res) => {
   } catch (err) {
     console.error("Error fetching user applications:", err);
     res.status(500).send("Server error");
+  }
+});
+
+// Student document preview/download endpoint
+router.get("/:appId/file/:fieldName", auth, async (req, res) => {
+  try {
+    const { appId, fieldName } = req.params;
+    // Try all application types
+    let app = await SchoolFeesApplication.findById(appId);
+    if (!app) app = await TravelExpensesApplication.findById(appId);
+    if (!app) app = await StudyBooksApplication.findById(appId);
+    if (!app || !app[fieldName] || !app[fieldName].data) {
+      return res.status(404).json({ msg: "File not found" });
+    }
+    // Check that the user owns this application
+    if (app.user.toString() !== req.user.id) {
+      return res.status(403).json({ msg: "Unauthorized" });
+    }
+    const fileBuffer = Buffer.isBuffer(app[fieldName].data)
+      ? app[fieldName].data
+      : Buffer.from(app[fieldName].data);
+
+    res.setHeader("Content-Type", app[fieldName].contentType);
+    res.setHeader("Content-Length", fileBuffer.length);
+    const dispositionType =
+      app[fieldName].contentType.startsWith("image/") ||
+      app[fieldName].contentType === "application/pdf"
+        ? "inline"
+        : "attachment";
+    res.setHeader(
+      "Content-Disposition",
+      `${dispositionType}; filename=\"${app[fieldName].fileName}\"`
+    );
+    res.send(fileBuffer);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+  }
+});
+
+// Student cancels (deletes) their own application
+router.delete('/:appId', auth, async (req, res) => {
+  try {
+    const { appId } = req.params;
+    // Try all application types
+    let app = await SchoolFeesApplication.findById(appId);
+    let model = SchoolFeesApplication;
+    if (!app) {
+      app = await TravelExpensesApplication.findById(appId);
+      model = TravelExpensesApplication;
+    }
+    if (!app) {
+      app = await StudyBooksApplication.findById(appId);
+      model = StudyBooksApplication;
+    }
+    if (!app) {
+      return res.status(404).json({ msg: 'Application not found' });
+    }
+    // Only allow the owner to delete
+    if (app.user.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'Unauthorized' });
+    }
+    await model.findByIdAndDelete(appId);
+    res.json({ success: true, msg: 'Application cancelled/deleted successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
   }
 });
 
