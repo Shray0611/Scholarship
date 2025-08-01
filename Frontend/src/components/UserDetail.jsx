@@ -5,9 +5,6 @@ import { Card, Button, Alert, DocumentViewer } from "./ui";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// Configure axios base URL
-axios.defaults.baseURL = BASE_URL;
-
 const UserDetail = () => {
   const { id } = useParams();
   const [registration, setRegistration] = useState(null);
@@ -1058,6 +1055,29 @@ const UserDetail = () => {
                 {applications.length > 1 ? "s" : ""}
               </span>
             )}
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/admin/manage-student/${id}`)}
+              size="small"
+            >
+              <span className="flex items-center">
+                <svg
+                  className="w-4 h-4 mr-1"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                Manage Account
+              </span>
+            </Button>
           </div>
         </div>
       </div>

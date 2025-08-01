@@ -8,6 +8,7 @@ const SchoolFeesApplication = require("../models/SchoolFeesApplication");
 const TravelExpensesApplication = require("../models/TravelExpensesApplication");
 const StudyBooksApplication = require("../models/StudyBooksApplication");
 const PDFDocument = require("pdfkit");
+const bcrypt = require("bcryptjs");
 
 // GET /api/admin/users
 // Get all users for admin dashboard
@@ -1095,6 +1096,381 @@ router.get(
     }
   }
 );
+
+// POST /api/admin/create-student-account
+// Create a new student account (Step 1: User account only)
+router.post("/create-student-account", [auth, adminAuth], async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Validate required fields
+    if (!username || !password) {
+      return res.status(400).json({ 
+        msg: "Username and password are required" 
+      });
+    }
+
+    // Check if username already exists
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ msg: "Username already exists" });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user account only
+    const user = new User({
+      username,
+      password: hashedPassword,
+      role: "user"
+    });
+
+    await user.save();
+
+    res.json({
+      success: true,
+      msg: "User account created successfully",
+      user: {
+        _id: user._id,
+        username: user.username,
+        role: user.role
+      }
+    });
+
+  } catch (err) {
+    console.error("Error creating user account:", err);
+    res.status(500).json({ msg: "Server error while creating user account" });
+  }
+});
+
+// POST /api/admin/create-student-registration
+// Create student registration (Step 2: Registration only)
+router.post("/create-student-registration", [auth, adminAuth], async (req, res) => {
+  try {
+    const {
+      userId,
+      academicYear,
+      collegeName,
+      courseName,
+      applicantName,
+      motherName,
+      dob,
+      address,
+      villageName,
+      state,
+      caste,
+      gender,
+      orphan,
+      disabled
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !applicantName || !motherName || !dob) {
+      return res.status(400).json({ 
+        msg: "User ID, applicant name, mother's name, and date of birth are required" 
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Check if registration already exists
+    const existingRegistration = await StudentRegistration.findOne({ user: userId });
+    if (existingRegistration) {
+      return res.status(400).json({ msg: "Registration already exists for this user" });
+    }
+
+    // Create student registration
+    const registration = new StudentRegistration({
+      academicYear,
+      date: new Date(),
+      collegeName,
+      courseName,
+      applicantName,
+      motherName,
+      dob: new Date(dob),
+      address,
+      villageName,
+      state,
+      caste,
+      gender,
+      orphan: orphan || false,
+      disabled: disabled || false,
+      user: userId
+    });
+
+    await registration.save();
+
+    res.json({
+      success: true,
+      msg: "Student registration created successfully",
+      registration: {
+        _id: registration._id,
+        applicantName: registration.applicantName
+      }
+    });
+
+  } catch (err) {
+    console.error("Error creating student registration:", err);
+    res.status(500).json({ msg: "Server error while creating student registration" });
+  }
+});
+
+// POST /api/admin/create-school-fees-application
+// Create school fees application on behalf of a student
+router.post("/create-school-fees-application", [auth, adminAuth], async (req, res) => {
+  try {
+    const { userId, ...applicationData } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ msg: "User ID is required" });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Check if user has registration
+    const registration = await StudentRegistration.findOne({ user: userId });
+    if (!registration) {
+      return res.status(400).json({ msg: "User must be registered first" });
+    }
+
+    // Create school fees application
+    const application = new SchoolFeesApplication({
+      ...applicationData,
+      user: userId,
+      status: "pending"
+    });
+
+    await application.save();
+
+    res.json({
+      success: true,
+      msg: "School fees application created successfully",
+      application: {
+        _id: application._id,
+        status: application.status
+      }
+    });
+
+  } catch (err) {
+    console.error("Error creating school fees application:", err);
+    res.status(500).json({ msg: "Server error while creating application" });
+  }
+});
+
+// POST /api/admin/create-travel-expenses-application
+// Create travel expenses application on behalf of a student
+router.post("/create-travel-expenses-application", [auth, adminAuth], async (req, res) => {
+  try {
+    const { userId, ...applicationData } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ msg: "User ID is required" });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Check if user has registration
+    const registration = await StudentRegistration.findOne({ user: userId });
+    if (!registration) {
+      return res.status(400).json({ msg: "User must be registered first" });
+    }
+
+    // Create travel expenses application
+    const application = new TravelExpensesApplication({
+      ...applicationData,
+      user: userId,
+      status: "pending"
+    });
+
+    await application.save();
+
+    res.json({
+      success: true,
+      msg: "Travel expenses application created successfully",
+      application: {
+        _id: application._id,
+        status: application.status
+      }
+    });
+
+  } catch (err) {
+    console.error("Error creating travel expenses application:", err);
+    res.status(500).json({ msg: "Server error while creating application" });
+  }
+});
+
+// POST /api/admin/create-study-books-application
+// Create study books application on behalf of a student
+router.post("/create-study-books-application", [auth, adminAuth], async (req, res) => {
+  try {
+    const { userId, ...applicationData } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ msg: "User ID is required" });
+    }
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Check if user has registration
+    const registration = await StudentRegistration.findOne({ user: userId });
+    if (!registration) {
+      return res.status(400).json({ msg: "User must be registered first" });
+    }
+
+    // Create study books application
+    const application = new StudyBooksApplication({
+      ...applicationData,
+      user: userId,
+      status: "pending"
+    });
+
+    await application.save();
+
+    res.json({
+      success: true,
+      msg: "Study books application created successfully",
+      application: {
+        _id: application._id,
+        status: application.status
+      }
+    });
+
+  } catch (err) {
+    console.error("Error creating study books application:", err);
+    res.status(500).json({ msg: "Server error while creating application" });
+  }
+});
+
+// PUT /api/admin/update-student-account/:userId
+// Update student account and registration details
+router.put("/update-student-account/:userId", [auth, adminAuth], async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const {
+      username,
+      password,
+      academicYear,
+      collegeName,
+      courseName,
+      applicantName,
+      motherName,
+      dob,
+      address,
+      villageName,
+      state,
+      caste,
+      gender,
+      orphan,
+      disabled
+    } = req.body;
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Update user if username or password provided
+    if (username || password) {
+      if (username && username !== user.username) {
+        // Check if new username already exists
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+          return res.status(400).json({ msg: "Username already exists" });
+        }
+        user.username = username;
+      }
+
+      if (password) {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+      }
+
+      await user.save();
+    }
+
+    // Update registration
+    const registration = await StudentRegistration.findOne({ user: userId });
+    if (registration) {
+      if (academicYear) registration.academicYear = academicYear;
+      if (collegeName) registration.collegeName = collegeName;
+      if (courseName) registration.courseName = courseName;
+      if (applicantName) registration.applicantName = applicantName;
+      if (motherName) registration.motherName = motherName;
+      if (dob) registration.dob = new Date(dob);
+      if (address) registration.address = address;
+      if (villageName) registration.villageName = villageName;
+      if (state) registration.state = state;
+      if (caste) registration.caste = caste;
+      if (gender) registration.gender = gender;
+      if (orphan !== undefined) registration.orphan = orphan;
+      if (disabled !== undefined) registration.disabled = disabled;
+
+      await registration.save();
+    }
+
+    res.json({
+      success: true,
+      msg: "Student account updated successfully"
+    });
+
+  } catch (err) {
+    console.error("Error updating student account:", err);
+    res.status(500).json({ msg: "Server error while updating student account" });
+  }
+});
+
+// DELETE /api/admin/delete-student-account/:userId
+// Delete student account and all associated data
+router.delete("/delete-student-account/:userId", [auth, adminAuth], async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ msg: "User not found" });
+    }
+
+    // Delete all applications
+    await SchoolFeesApplication.deleteMany({ user: userId });
+    await TravelExpensesApplication.deleteMany({ user: userId });
+    await StudyBooksApplication.deleteMany({ user: userId });
+
+    // Delete registration
+    await StudentRegistration.deleteMany({ user: userId });
+
+    // Delete user
+    await User.findByIdAndDelete(userId);
+
+    res.json({
+      success: true,
+      msg: "Student account and all associated data deleted successfully"
+    });
+
+  } catch (err) {
+    console.error("Error deleting student account:", err);
+    res.status(500).json({ msg: "Server error while deleting student account" });
+  }
+});
 
 // GET /api/admin/school-fees/:appId/file/:fieldName
 router.get(

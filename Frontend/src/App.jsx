@@ -9,6 +9,8 @@ import UserRegistration from "./components/UserRegistration";
 import Registration from "./components/Registration";
 import Options from "./components/Options";
 import AdminDashboard from "./components/AdminDashboard";
+import CreateStudentAccount from "./components/CreateStudentAccount";
+import ManageStudentAccount from "./components/ManageStudentAccount";
 import UserDetail from "./components/UserDetail";
 import SchoolFeesForm from "./components/SchoolFeesForm";
 import TravelExpensesForm from "./components/TravelExpensesForm";
@@ -137,6 +139,22 @@ function App() {
               element={
                 <AdminRoute>
                   <UserDetail />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/manage-student/:userId"
+              element={
+                <AdminRoute>
+                  <ManageStudentAccount />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/create-student"
+              element={
+                <AdminRoute>
+                  <CreateStudentAccount />
                 </AdminRoute>
               }
             />

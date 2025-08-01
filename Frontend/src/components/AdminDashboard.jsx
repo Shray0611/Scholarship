@@ -110,8 +110,16 @@ const AdminDashboard = () => {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
           Admin Dashboard
         </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {new Date().toLocaleDateString()}
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {new Date().toLocaleDateString()}
+          </div>
+          <button
+            onClick={() => navigate("/admin/create-student")}
+            className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200"
+          >
+            Create Student Account
+          </button>
         </div>
       </div>
 
