@@ -102,7 +102,7 @@ const Home = () => {
                   </div>
                   <div className="p-6 pt-0">
                     <Link
-                      to="/register"
+                      // to="/register"
                       className="text-blue-600 dark:text-blue-400 hover:underline font-medium inline-flex items-center"
                     >
                       Learn more

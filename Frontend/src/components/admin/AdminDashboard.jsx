@@ -5,7 +5,6 @@ import { Card, Alert } from "../ui";
 
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
-  const [registeredUsers, setRegisteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -45,43 +44,6 @@ const AdminDashboard = () => {
         // Store all users
         setUsers(res.data);
 
-        // Check registration status for each user
-        const registeredUsersPromises = res.data.map(async (user) => {
-          try {
-            // Try to fetch registration data for this user
-            const regResponse = await axios.get(
-              `/api/admin/users/${user._id}`,
-              {
-                headers: { "x-auth-token": token },
-              }
-            );
-
-            // If we get a response, update the user object with hasRegistered=true
-            return { ...user, hasRegistered: true };
-          } catch (err) {
-            // If we get a 404, the user hasn't registered
-            if (err.response && err.response.status === 404) {
-              return { ...user, hasRegistered: false };
-            }
-            // For other errors, default to not registered
-            return { ...user, hasRegistered: false };
-          }
-        });
-
-        // Wait for all promises to resolve
-        const usersWithRegistrationStatus = await Promise.all(
-          registeredUsersPromises
-        );
-
-        // Update users with registration status
-        setUsers(usersWithRegistrationStatus);
-
-        // Filter to get only registered users
-        const registered = usersWithRegistrationStatus.filter(
-          (user) => user.hasRegistered
-        );
-        setRegisteredUsers(registered);
-
         setLoading(false);
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -96,6 +58,22 @@ const AdminDashboard = () => {
     navigate(`/admin/users/${id}`);
   };
 
+  const handleEditUser = (id) => {
+    navigate(`/admin/users/edit/${id}`);
+  };
+
+  const handleScholarshipApplication = (userId) => {
+    navigate(`/admin/users/${userId}/apply/scholarship`);
+  };
+
+  const handleTravelApplication = (userId) => {
+    navigate(`/admin/users/${userId}/apply/travel`);
+  };
+
+  const handleAddBeneficiary = () => {
+    navigate("/admin/add-beneficiary");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -108,10 +86,32 @@ const AdminDashboard = () => {
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-          Admin Dashboard
+          Beneficiary Management
         </h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {new Date().toLocaleDateString("en-GB")}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate("/admin/add-beneficiary")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-md transition-colors duration-200 ease-in-out"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Beneficiary
+          </button>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {new Date().toLocaleDateString("en-GB")}
+          </div>
         </div>
       </div>
 
@@ -126,98 +126,9 @@ const AdminDashboard = () => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card
-          className="bg-white border border-blue-200 shadow-lg text-gray-900 dark:bg-gradient-to-br dark:from-blue-500 dark:to-blue-600 dark:text-white"
-          padding="normal"
-          shadow="lg"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Total Users</h3>
-              <p className="text-3xl font-bold">{users.length}</p>
-            </div>
-            <div className="bg-white bg-opacity-30 p-3 rounded-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </Card>
-
-        <Card
-          className="bg-white border border-green-200 shadow-lg text-gray-900 dark:bg-gradient-to-br dark:from-green-500 dark:to-green-600 dark:text-white"
-          padding="normal"
-          shadow="lg"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Registrations</h3>
-              <p className="text-3xl font-bold">{registeredUsers.length}</p>
-            </div>
-            <div className="bg-white bg-opacity-30 p-3 rounded-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-          </div>
-        </Card>
-
-        <Card
-          className="bg-white border border-purple-200 shadow-lg text-gray-900 dark:bg-gradient-to-br dark:from-purple-500 dark:to-purple-600 dark:text-white"
-          padding="normal"
-          shadow="lg"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">Applications</h3>
-              <p className="text-3xl font-bold">{registeredUsers.length}</p>
-            </div>
-            <div className="bg-white bg-opacity-30 p-3 rounded-full">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
-            </div>
-          </div>
-        </Card>
-      </div>
-
       <Card
-        title="User Management"
-        subtitle="Click on a user to view details and applications"
+        title="Beneficiary Management"
+        subtitle="Manage beneficiaries and their applications"
         shadow="lg"
         padding="normal"
         rounded="lg"
@@ -239,7 +150,7 @@ const AdminDashboard = () => {
                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
               />
             </svg>
-            <p>No users found in the system.</p>
+            <p>No beneficiaries found in the system.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -254,19 +165,7 @@ const AdminDashboard = () => {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  >
-                    Role
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                  >
-                    Registration Status
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   >
                     Actions
                   </th>
@@ -284,35 +183,44 @@ const AdminDashboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${
-                          user.role === "admin"
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                            : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        }`}
-                      >
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {user.hasRegistered ? (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                          Registered
-                        </span>
-                      ) : (
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                          Not Registered
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                      <button
-                        onClick={() => handleUserClick(user._id)}
-                        className="text-primary hover:text-primary-dark font-medium"
-                      >
-                        View Details
-                      </button>
+                      <div className="flex justify-center">
+                        <div className="flex flex-wrap gap-3 justify-center items-center max-w-2xl">
+                          <button
+                            onClick={() => handleUserClick(user._id)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium px-3 py-2 rounded-md bg-blue-50 hover:bg-blue-100 dark:bg-blue-900 dark:hover:bg-blue-800 transition-colors duration-200 text-sm min-w-fit"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => handleEditUser(user._id)}
+                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 font-medium px-3 py-2 rounded-md bg-green-50 hover:bg-green-100 dark:bg-green-900 dark:hover:bg-green-800 transition-colors duration-200 text-sm min-w-fit"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleScholarshipApplication(user._id)
+                            }
+                            className="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-medium px-3 py-2 rounded-md bg-purple-50 hover:bg-purple-100 dark:bg-purple-900 dark:hover:bg-purple-800 transition-colors duration-200 text-sm min-w-fit"
+                          >
+                            School Fees Scholarship
+                          </button>
+                          <button
+                            onClick={() => handleTravelApplication(user._id)}
+                            className="text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 font-medium px-3 py-2 rounded-md bg-orange-50 hover:bg-orange-100 dark:bg-orange-900 dark:hover:bg-orange-800 transition-colors duration-200 text-sm min-w-fit"
+                          >
+                            Travel
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleStudyBooksApplication(user._id)
+                            }
+                            className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium px-3 py-2 rounded-md bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900 dark:hover:bg-indigo-800 transition-colors duration-200 text-sm min-w-fit"
+                          >
+                            Study Books
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))}

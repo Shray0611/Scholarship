@@ -143,6 +143,14 @@ function App() {
               }
             />
             <Route
+              path="/admin/add-beneficiary"
+              element={
+                <AdminRoute>
+                  <Registration/>
+                </AdminRoute>
+              }
+            />
+            <Route
               path="/admin/view-records"
               element={
                 <AdminRoute>
